@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Path to your FreeSurfer subjects directory
+SUBJECTS_DIR=/N/slate/mdalamin/soccer/recon-all
+
+# File containing the list of subjects' image filenames
+SUBJECTS_LIST=/N/slate/mdalamin/soccer/recon-all/subj.txt
+
+# Number of threads to use
+THREADS=24
+
+# Loop through each subject in the subjects list
+while IFS= read -r SUBJECT_IMAGE; do
+  echo "Processing subject image: $SUBJECT_IMAGE"
+  
+  # Run thalamic subfield segmentation using segment_subregions
+  segment_subregions hippo-amygdala --cross $SUBJECT_IMAGE --threads $THREADS
+
+done < "$SUBJECTS_LIST"
+
+echo "Thalamic subfield segmentation completed for all subjects."
+
+
