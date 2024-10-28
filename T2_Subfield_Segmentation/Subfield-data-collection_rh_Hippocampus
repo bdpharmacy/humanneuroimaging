@@ -9,7 +9,7 @@ temp_file="combined_hippocampal_data.tmp"
 # Iterate over each subject folder and append data to the temporary file
 for subject_dir in "$main_dir"/*; do
     if [ -d "$subject_dir" ]; then
-        file_path="$subject_dir/mri/lh.hippoSfVolumes.txt"
+        file_path="$subject_dir/mri/rh.hippoSfVolumes.txt"
         if [ -f "$file_path" ]; then
             tail -n +2 "$file_path" | awk '{print $1, $2, "'"$subject_dir"'" }' >> "$temp_file"
         fi
@@ -21,9 +21,9 @@ echo "Subfield Volume Subject" > "$temp_file.header"
 cat "$temp_file" >> "$temp_file.header"
 
 # Convert the temporary file to a CSV file
-awk -F' ' '{print $1, $2, $3}' "$temp_file.header" > "lh_combined_hippocampal_data.csv"
+awk -F' ' '{print $1, $2, $3}' "$temp_file.header" > "rh_combined_hippocampal_data.csv"
 
 # Remove the temporary files
 rm "$temp_file" "$temp_file.header"
 
-echo "Data concatenation completed. Combined data saved to 'lh_combined_hippocampal_data.csv'"
+echo "Data concatenation completed. Combined data saved to 'rh_combined_hippocampal_data.csv'"
