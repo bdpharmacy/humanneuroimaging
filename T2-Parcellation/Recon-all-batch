@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH -J rec1
+#SBATCH -A r00167
+#SBATCH -o %j.txt
+#SBATCH -e %j.err
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=mdalamin@iu.edu
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=24
+#SBATCH --time=23:59:00
+#SBATCH --mem=128gb
+
+######  Module commands #####
+module load freesurfer/7.4.1
+module load gnu-parallel/20230522
+export SUBJECTS_DIR=/N/slate/mdalamin/soccer/recon-all
+
+
+######  Job commands go below this line #####
+
+cd /N/slate/mdalamin/soccer/T1
+
+
+ls *.nii.gz | parallel --jobs 18 recon-all -s {.} -i {} -all
