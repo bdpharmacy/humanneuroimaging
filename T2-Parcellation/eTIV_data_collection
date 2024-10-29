@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Define output file
+output_file="eTIV_volumes.csv"
+echo "Subject,Line34" > "$output_file"
+
+# Loop through each subject directory
+for subject_dir in to/path/recon-all/*; do
+    if [[ -d "$subject_dir/stats" ]]; then
+        subject=$(basename "$subject_dir")
+        line34=$(sed -n '34p' "$subject_dir/stats/aseg.stats")
+        echo "$subject,$line34" >> "$output_file"
+    fi
+done
+
