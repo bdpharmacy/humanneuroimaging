@@ -1,0 +1,23 @@
+#!/bin/bash
+for subj in $(cat subj-all.txt); do
+    echo "Subjects name: $subj";
+    cd $subj;
+    
+    # T1 Skullout
+    flirt -in T1-skullout.nii.gz -ref b0.nii.gz -out T1-b0.nii.gz -dof 6 -cost mutualinfo -omat T1-b0.mat;
+    
+    #5tt file preparation
+    5ttgen fsl T1-b0.nii.gz 5tt.mif -premasked -nthreads 24 -force;
+    
+    #Registration of 5tt image to T1
+    mrconvert 5tt.mif 5tt_nocoreg.nii.gz -force;
+    transformconvert T1-b0.mat b0.nii.gz 5tt_nocoreg.nii.gz flirt_import T1-b0.txt;
+    mrtransform 5tt_nocoreg.mif -linear T1-b0.txt -inverse 5tt_coreg.mif -force;
+    
+    #Track generation
+    tckgen wmfod.mif 10M.tck -act 5tt_coreg.mif -backtrack -crop_at_gmwmi -seed_dynic wmfod.mif -maxlength 250 -select 10M -cutoff 0.06 -nthreads 24;
+    
+    #Track sifting
+    tcksift 10M.tck wmfod.mif 5M.tck -act 5tt_coreg.mif -term_number 5M -nthreads 24;
+    cd ..;
+    done
