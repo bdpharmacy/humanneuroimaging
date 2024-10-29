@@ -1,0 +1,8 @@
+#!/bin/bash
+input_folder="/N/slate/mdalamin/WMH-AD/aparca2009"
+
+for file in "$input_folder"/*.mgz; do
+	base_name=$(basename "$file" .mgz)
+	output_file="$input_folder/${base_name}.nii.gz" 
+	mrconvert "$file" "$output_file"
+	done
