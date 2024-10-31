@@ -1,0 +1,120 @@
+#/bin/bash
+# MOTION CURRECTION OF STRUCTUEAL T1
+mcflirt -in sub-28876_ses-1_run-1_T1w.nii.gz -o T1.nii.gz;
+# Reconstruction of whole brain
+recon-all -all -i T1.nii.gz -s 28876;
+# Hippocampal subfield segmentation
+segmentHA_T1.sh 28876T1;
+segmentHA_T2.sh 30062 /Users/mdalamin/Desktop/MRI/OASIS/CN/OAS30062_MR_d3432/anat4/NIFTI/sub-OAS30062_ses-d3432_T2w.nii.gz 30062_T2 1;
+
+quantifyHAsubregions.sh hippoSf T1 all-hippocampal-subfield.csv;
+
+quantifyHAsubregions.sh amygNuc T1 all-amygdala-subfield.csv;
+
+segmentThalamicNuclei.sh 30003;
+
+
+# Create DWI file and Extract B0 image
+mrconvert -fslgrad bvec.bvec bval.bval dwi.nii.gz dwi.mif;
+dwiextract -bzero dwi.mif b0.mif && mrconvert b0.mif b0.nii;
+
+# DATA DENOISE
+dwidenoise dwi.nii.gz denoised.mif;
+mrconvert denoised.mif denoised.nii.gz;
+
+# EDDY CURRECTION
+eddy_correct denoised.nii.gz edwi.nii.gz 0;
+
+# INTIAL MASK FOR BIAS REMOVAL
+dwi2mask edwi.nii.gz mask.mif -fslgrad bvec.bvec bval.bval;
+dwibiascorrect edwi.nii.gz biascorrected.mif -fsl -mask mask.mif -fslgrad bvec.bvec bval.bval;
+
+# FINAL MASK FOR FOD CALCULATION
+dwi2mask biascorrected.mif mask.mif;
+
+# STRIDE INTEGRATION FOR RESPONSE FUNCTION ESTIMATION
+mrconvert biascorrected.mif - -stride 0,0,0,1 | dwiextract - tmp-dwi.mif;
+mrconvert edwi.nii.gz - -stride -1,2,3,4 | dwiextract - tmp-dwi.mif;
+
+# RESPONSE FUNCTION ESTIMATION
+dwi2response tournier tmp-dwi.mif wm.txt;
+
+# FOD CALCULATION
+bet b0.nii b0-bet -R -o -m -g -0.3 -f 0.1;
+dwi2fod csd tmp-dwi.mif -mask b0-bet_mask.nii.gz wm.txt fod.mif;
+
+# Generate 5tt file and check in mrview (mrview 5tt.mif) [If 5ttgen does not work then extract brain with bet [bet T1.nii.gz T1-bet -R -o -m]
+5ttgen fsl T1.nii.gz 5tt.mif;
+
+# Register 5tt file to B0 image (NOt required since 5tt is well aligned)
+flirt -in b0.nii -ref T1-bet_mask.nii.gz -out b0_over_T1 -omat b0_over_T1.mat -dof 6 -searchrx -180 180 -searchry -180 180 -searchrz -180 180;
+transformconvert b0_over_T1.mat b0.nii T1-bet_mask.nii.gz flirt_import transf_b0_over_T1.mat;
+transformcalc transf_b0_over_T1.mat invert transf_inv_b0_over_T1.mat;
+mrtransform -linear transf_inv_b0_over_T1.mat 5tt.mif 5tt_warped.mif;
+
+#TCK-GEN
+tckgen fod.mif 10M.tck -act 5tt.mif -crop_at_gmwmi -seed_dynamic fod.mif -maxlength 250 -select 10M -cutoff 0.06;
+tcksift act_1000000_fiber.tck fod.mif tcksift.tck -act 5tt_warped_MRtrix.nii.gz -term_number 500000;
+
+# tck2connectome
+tck2connectome tcksift.tck cortical_seg_lut.nii conectom_fiber_count1M.csv -zero_diagonal;
+tck2connectome 10M.tck nodes_fixSGM.mif connectome.csv -zero_diagonal;
+mrview nodes_fixSGM.mif -connectome.init nodes_fixSGM.mif -connectome.load connectome.csv;
+
+## ONLY HIPPOCAMPAL SUBFIELD REPLACEMENT
+mrconvert lh.hippoAmygLabels-T1-31077_T2.v21.FS60.FSvoxelSpace.mgz lhFS60.nii;
+mrconvert rh.hippoAmygLabels-T1-31077_T2.v21.FS60.FSvoxelSpace.mgz rhFS60.nii && mrconvert aparc+aseg.mgz aparc+aseg.nii;
+
+# SPM registration Ref b0.nii Source T1.nii other aparc+aseg.nii lhFS60.nii.gz rhFS60.nii.gz (output= raparc+aseg.nii rlhFS60.nii.gz rrhFS60.nii.gz)
+# STEP1: Remove amygdala from hippo-amyg subfields
+fslmaths rrhFS60.nii -min 226 rHIPPO.nii.gz;
+fslmaths rlhFS60.nii -min 226 lHIPPO.nii.gz;
+
+# STEP2: Edit label number in ITKSNAP and save rHIP.nii> rHIP_F.nii lHIP.nii> lHIP-F.nii
+# Label number check hippocampal subfield excel file
+fslmaths rHIP_F.nii.gz -add lHIP_F.nii.gz only-hippo-subfields.nii.gz;
+
+////////////////////////
+# STEP3: Remove right and left whole hippocampus from percelated file
+fslmaths raparc+aseg.nii -thr 17 -uthr 17 17.nii.gz;
+fslmaths raparc+aseg.nii -thr 53 -uthr 53 53.nii.gz;
+fslmaths raparc+aseg.nii -sub 17.nii.gz -sub 53.nii.gz wb-hip.nii;
+
+# STEP4: Create hippocampal mask
+fslmaths 17.nii.gz -bin 17-bin.nii.gz;
+fslmaths 53.nii.gz -bin 53-bin.nii.gz;
+fslmaths 17-bin.nii.gz -add 53-bin.nii.gz mask.nii.gz;
+
+# STEP5: Replace hippocampal subfields (STEP2) with mask (STEP4)
+fslmaths only-hippo-subfields.nii.gz -mul mask.nii.gz hippocampus.nii.gz;
+
+# STEP6: Add hippocampal subfields (STEP5) with STEP3
+fslmaths wb-hip.nii -add hippocampus.nii.gz wb+hip.nii;
+\\\\\\\\\\\\\\\\\\\\\\\\
+
+///////////////////////
+fslmaths rHIP_F.nii.gz -add lHIP_F.nii.gz only-hippo-subfields.nii.gz;
+fslmaths raparc+aseg.nii -thr 17 -uthr 17 17.nii.gz;
+fslmaths raparc+aseg.nii -thr 53 -uthr 53 53.nii.gz;
+fslmaths raparc+aseg.nii -sub 17.nii.gz -sub 53.nii.gz wb-hip.nii;
+fslmaths 17.nii.gz -bin 17-bin.nii.gz;
+fslmaths 53.nii.gz -bin 53-bin.nii.gz;
+fslmaths 17-bin.nii.gz -add 53-bin.nii.gz h-mask.nii.gz;
+fslmaths only-hippo-subfields.nii.gz -mul h-mask.nii.gz hippocampus.nii.gz;
+fslmaths wb-hip.nii -add hippocampus.nii.gz wb+hip.nii;
+labelconvert wb+hip.nii.gz /Users/mdalamin/Desktop/recon-all/my_lut_20191218.txt /Users/mdalamin/Desktop/recon-all/my_fs_20191218.txt node.mif;
+\\\\\\\\\\\\\\\\\\\\\\\\
+
+# STEP7: Node preparation
+labelconvert wb+hip.nii.gz /Users/mdalamin/Desktop/recon-all/my_lut_20191218.txt /Users/mdalamin/Desktop/recon-all/my_fs_20191218.txt node.mif;
+
+labelsgmfix node.mif T1-bet.nii.gz my_fs.txt nodes_fixSGM.mif -premasked;
+
+mrconvert biascorrected.mif biascorrected.nii.gz;
+dtifit --data=biascorrected.nii.gz --out=dti --mask=b0-bet_mask.nii.gz --bvecs=bvec.bvec --bvals=bval.bval;
+fslmaths dti_L2.nii.gz -add dti_L3.nii.gz -div 2 dti_RD.nii.gz && mv dti_L1.nii.gz dti_AD.nii.gz;
+mrconvert biascorrected.mif biascorrected.nii.gz;
+mrconvert mask.mif mask-metr.nii.gz;
+dtifit --data=biascorrected.nii.gz --out=dti --mask=mask-metr.nii.gz --bvecs=bvec.bvec --bvals=bval.bval;
+fslmaths dti_L2.nii.gz -add dti_L3.nii.gz -div 2 dti_RD.nii.gz;
+mv dti_L1.nii.gz dti_AD.nii.gz;
