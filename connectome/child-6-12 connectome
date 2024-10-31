@@ -1,0 +1,62 @@
+## DWI preprocessing
+mrconvert -fslgrad 29591.bvec 29591.bval 29591dwi.nii.gz dwi.mif;
+dwidenoise dwi.mif dwi-denoised.mif -noise noise.mif;
+dwipreproc dwi-denoised.mif dwi-processed.mif -rpe_none -pe_dir AP;
+dwibiascorrect -fsl dwi-processed.mif dwi-biascorrected.mif;
+dwi2response dhollander dwi-biascorrected.mif wm.txt gm.txt csf.txt;
+dwi2mask dwi-biascorrected.mif dwi-mask.mif;
+dwi2fod msmt_csd dwi-biascorrected.mif wm.txt wm.mif gm.txt gm.mif csf.txt csf.mif -mask dwi-mask.mif;
+
+##b0 image extraction 
+dwiextract -bzero dwi-biascorrected.mif b0.mif;
+mrconvert b0.mif b0.nii;
+mrconvert dwi-mask.mif dwi-mask.nii;
+fslmaths b0 -mul dwi-mask b0_masked ;
+
+## T1 skull strip
+bet T1-ro.nii.gz T1-sor_bet -o -m -f 0.4 -R;
+
+## T1 registration to b0
+flirt -in b0_masked.nii.gz -ref T1_bet.nii.gz -dof 6 -out b0_T1_FLIRT -omat b0_T1_FLIRT.mat;
+convert_xfm -omat T1_b0_FLIRT.mat -inverse b0_T1_FLIRT.mat;
+flirt -in T1_bet -ref b0 -out T1_b0_applyxfm -init T1_b0_FLIRT.mat -applyxfm;
+
+## 5 tissue type segmentation
+5ttgen fsl T1_b0_applyxfm.nii.gz 5tt.nii.gz -premasked;
+
+## T1 reconstruction
+recon-all -all -i T1.nii -s T1-Recon;
+mrconvert aparc.a2009s+aseg.mgz corticalseg-da.nii;
+fslreorient2std corticalseg-da.nii da-atlas.nii;
+
+## 164-atlas registration
+flirt -in b0_masked.nii.gz -ref da-atlas.nii.gz -dof 6 -out b0_da_FLIRT -omat b0_da_FLIRT.mat;
+convert_xfm -omat da_b0_FLIRT.mat -inverse b0_da_FLIRT.mat;
+flirt -in da-atlas.nii.gz -ref b0 -out da_b0_applyxfm -init da_b0_FLIRT.mat -applyxfm;
+
+flirt -in da-atlas.nii.gz -ref b0_masked.nii.gz -dof 6 -out b0_da_FLIRT -omat b0_da_FLIRT.mat; 
+convert_xfm -omat da_b0_FLIRT.mat -inverse b0_da_FLIRT.mat;
+flirt -in da-atlas.nii.gz -ref b0 -out da_b0_applyxfm -init da_b0_FLIRT.mat -applyxfm;
+
+## Label to node conversion
+labelconvert corticalseg-164.nii /Applications/freesurfer/FreeSurferColorLUT.txt /Users/uqmalam9/mrtrix3/share/mrtrix3/labelconvert/fs_a2009s.txt nodes-164.mif;
+
+## Fixation of Sub-cortical grey matter
+labelsgmfix nodes-164.mif T1_bet.nii.gz /Users/uqmalam9/mrtrix3/share/mrtrix3/labelconvert/fs_a2009s.txt nodes_fixSGM.mif -premasked;
+
+
+## Track generation
+tckgen wm.mif 10M.tck -act 5tt.nii.gz -backtrack -crop_at_gmwmi -seed_dynamic wm.mif -maxlength 250 -select 10000000 -cutoff 0.06;
+
+## Conversion to biologically meaningful track
+tcksift 10M.tck wm.mif 5M_SIFT.tck -act 5tt.nii.gz -term_number 5M;
+
+## Conncetome generation
+tck2connectome 5M_SIFT.tck nodes-164_fixSGM.mif connectome-164.csv -zero_diagonal;
+
+#Check mrview nodes_fixSGM.mif -connectome.init nodes_fixSGM.mif -connectome.load 55-connectome.csv
+
+INODE COMMAND
+tckgen wm.mif 10M.tck -act 5tt.nii.gz -backtrack -crop_at_gmwmi -seed_dynamic wm.mif -maxlength 250 -number 10000000 -cutoff 0.06;
+tcksift 10M.tck wm.mif 5M_SIFT.tck -act 5tt.nii.gz -term_number 5M;
+tck2connectome 5M_SIFT.tck nodes_fixSGM.mif connectome.csv -zero_diagonal;
