@@ -1,0 +1,42 @@
+#Preprocessing
+mris_preproc --fsgd SoccerStudy.fsgd --f subjects.txt --cache-in thickness.fwhm10.fsaverage --target fsaverage --hemi lh --out lh.soccer.thickness.10.mgh
+mris_preproc --f subjects.txt --cache-in thickness.fwhm10.fsaverage --target fsaverage --hemi lh --out lh.soccer.thickness.10.mgh
+mris_preproc --f subjects.txt --cache-in thickness.fwhm10.fsaverage --target fsaverage --hemi rh --out rh.soccer.thickness.10.mgh
+
+#GLM Analysis (lh.control-soccer):
+mri_glmfit --y lh.soccer.thickness.10.mgh --fsgd SoccerStudy.fsgd dods --C control-soccer.mtx --surf fsaverage lh --cortex --glmdir lh.control-soccer.glmdir
+
+
+#To visualize the data (lh.control-soccer):
+freeview -f $SUBJECTS_DIR/fsaverage/surf/lh.inflated:annot=aparc.annot:annot_outline=1:overlay=/Volumes/Bismillah/soccer/lh.control-soccer.glmdir/control-soccer/sig.mgh:overlay_threshold=4,5 -viewport 3d
+
+mri_glmfit --y rh.soccer.thickness.10.mgh --fsgd SoccerStudy.fsgd --C control-soccer.mtx --surf fsaverage rh --cortex --glmdir rh.control-soccer.glmdir && mri_glmfit --y lh.soccer.thickness.10.mgh --fsgd SoccerStudy.fsgd --C control-soccer.mtx --surf fsaverage lh --cortex --glmdir lh.control-soccer.glmdir
+
+#To visualize the data (rh.control-soccer):
+freeview -f $SUBJECTS_DIR/fsaverage/surf/rh.inflated:annot=aparc.annot:annot_outline=1:overlay=/Volumes/Bismillah/soccer/rh.control-soccer.glmdir/control-soccer/sig.mgh:overlay_threshold=4,5 -viewport 3d
+freeview -f $SUBJECTS_DIR/fsaverage/surf/lh.inflated:annot=aparc.annot:annot_outline=1:overlay=/Volumes/Bismillah/soccer/lh.control-soccer.glmdir/control-soccer/sig.mgh:overlay_threshold=4,5 -viewport 3d
+
+# Clusterwise Correction for Multiple Comparisons
+mri_glmfit-sim --glmdir rh.control-soccer.glmdir --cache 4 neg --cwp  0.05 --2spaces && mri_glmfit-sim --glmdir lh.control-soccer.glmdir --cache 4 neg --cwp  0.05 --2spaces
+
+#To visualize the cluster-corrected data (rh.soccer-control):
+freeview -f $SUBJECTS_DIR/fsaverage/surf/lh.inflated:overlay=/Volumes/Bismillah/soccer/rh.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.masked.mgh:overlay_threshold=2,5:annot=/Volumes/Bismillah/soccer/rh.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.ocn.annot -viewport 3d
+
+#Volume analysis
+mris_preproc --f subjects.txt --cache-in volume.fwhm10.fsaverage --target fsaverage --hemi lh --out lh.soccer.volume.10.mgh && mris_preproc --f subjects.txt --cache-in volume.fwhm10.fsaverage --target fsaverage --hemi rh --out rh.soccer.volume.10.mgh
+
+mri_glmfit --y lh.soccer.volume.10.mgh --fsgd SoccerStudy.fsgd --C control-soccer.mtx --surf fsaverage lh --cortex --glmdir lh.volume.control-soccer.glmdir && mri_glmfit --y rh.soccer.volume.10.mgh --fsgd SoccerStudy.fsgd --C control-soccer.mtx --surf fsaverage rh --cortex --glmdir rh.volume.control-soccer.glmdir
+
+#Visualize Volume
+freeview -f $SUBJECTS_DIR/fsaverage/surf/rh.inflated:annot=aparc.annot:annot_outline=1:overlay=/Volumes/Bismillah/soccer/rh.volume.control-soccer.glmdir/control-soccer/sig.mgh:overlay_threshold=4,5 -viewport 3d
+freeview -f $SUBJECTS_DIR/fsaverage/surf/lh.inflated:annot=aparc.annot:annot_outline=1:overlay=/Volumes/Bismillah/soccer/lh.volume.control-soccer.glmdir/control-soccer/sig.mgh:overlay_threshold=4,5 -viewport 3d
+
+# Clusterwise Correction for Multiple Comparisons
+mri_glmfit-sim --glmdir rh.volume.control-soccer.glmdir --cache 4 neg --cwp  0.05 --2spaces
+mri_glmfit-sim --glmdir lh.volume.control-soccer.glmdir --cache 4 neg --cwp  0.05 --2spaces
+
+#To visualize the cluster-corrected data (lh.control-soccer):
+freeview -f $SUBJECTS_DIR/fsaverage/surf/lh.inflated:overlay=/Volumes/Bismillah/soccer/lh.volume.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.masked.mgh:overlay_threshold=1,5:annot=/Volumes/Bismillah/soccer/lh.volume.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.ocn.annot -viewport 3d
+
+freeview -f $SUBJECTS_DIR/fsaverage/surf/rh.inflated:overlay=/Volumes/Bismillah/soccer/rh.volume.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.masked.mgh:overlay_threshold=1,5:annot=/Volumes/Bismillah/soccer/rh.volume.control-soccer.glmdir/control-soccer/cache.th40.neg.sig.ocn.annot -viewport 3d
+
