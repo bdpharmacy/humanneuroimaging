@@ -4,9 +4,9 @@ https://web.mit.edu/fsl_v5.0.10/fsl/doc/wiki/GLM.html
 cat <<EOT > design.mat
 /design
 File
-/NumWaves 4
-/NumPoints 43
-/PPheights 1 1 1 1
+/NumWaves 3
+/NumPoints 36
+/PPheights 1 1 1
 /Matrix
 1 0 0
 1 0 0
@@ -50,7 +50,7 @@ EOT
 cat <<EOT > design.con
 /design
 File
-/NumWaves 4
+/NumWaves 3
 /NumContrasts 3
 /PPheights 1 1 1
 /Matrix
