@@ -1,0 +1,60 @@
+#fsl randomise 
+https://web.mit.edu/fsl_v5.0.10/fsl/doc/wiki/GLM.html
+# Create design.mat for one-way ANOVA
+cat <<EOT > design.mat
+/design
+File
+/NumWaves 4
+/NumPoints 43
+/PPheights 1 1 1 1
+/Matrix
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+1 0 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 1 0
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+0 0 1
+EOT
+
+# Create design.con for one-way ANOVA
+cat <<EOT > design.con
+/design
+File
+/NumWaves 4
+/NumContrasts 3
+/PPheights 1 1 1
+/Matrix
+1 -1 0 
+1 0 -1
+0 1 -1
+EOT
