@@ -1,0 +1,2 @@
+# Create a directory such as "DP-pcASL". Mention the ds number as ds005529, Mention the file name and location as "sub-*/anat*T1w.nii.gz"
+aws s3 sync --no-sign-request s3://openneuro.org/ds005529 DP-pCASL --exclude "*" --include "sub-*/anat/*T1w.nii.gz"
