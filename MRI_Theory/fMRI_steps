@@ -1,0 +1,85 @@
+Preprocessing: spatial and temporal preprocessing of the data to prepare it for the 1st and 2nd level inferential analysis
+Model Specification and Estimation: specifying and estimating parameters of the statistical model
+Statistical Inference: Making inferences about the estimated parameters using appropriate statistical methods
+Preprocessing
+Slice Timing Correction (fMRI only)
+Requires knowing the order of slice acquisition (top-down, bottom-up, or interleaved)
+Motion Correction (fMRI only)
+aka Realignment
+Corrects for head movement. Aligns data to a reference time volume (usually the mean image of all timepoints, but can be the first or another time point)
+Head movement has 6 parameters (translation along X, Y, and Z and rotation around X, Y, and Z)
+Realignment uses an affine rigid body transformation to manipulate the data in these parameters.
+A "good" subject will not translate over +/- 0.6mm and will not rotate over +/- 1 degrees (not sure, but seems to be good?)
+Artifact Detection (fMRI only)
+Identify and label images acquired during extreme rapid movement that should be excluded from further analysis
+Check the translation and rotation graphs for sudden movement greater than 2 SD from the mean (or for movement greater than 1mm)
+Corregistration
+Aligns the functional image with the reference structural image.
+Allows further transformations on the anatomical image, like normalization, to be directly applied to the functional one
+Normalization
+Used to compare the images of different subjects
+Translates the images onto a common shape and size (maps to a reference-space)
+Always includes a template and source images
+Template image is the standard brain in reference-space. Can be a Talairach-, MNI-, or SPM-template, or another reference image.
+Source image (normally a higher-resolution structural image) is used to calculate the transformation matrix, which is used for the rest of your images.
+Smoothing
+Used on both structural and functional data
+
+Applies a filter to the image
+Increases the signal to noise ratio (filter highest frequencies)
+Makes the larger scale changes more apparent
+Reduces spatial differences between subjects, so easier to compare
+Lose resolution!
+Can cause functionally different regions to combine - surface based analysis with smoothing on the surface may be better choice
+Applies a 3D Gaussian kernel to the image; amount of smoothing is determined by its full width at half maximum (FWHM) parameter
+If you're studying a small region, a large kernel might smooth the data too much; should be smaller than/equal to the activation you're trying to detect
+Some authors suggest using 2x{Voxel dimensions} as a reasonable starting point
+Segmentation (sMRI only)
+Divides the brain into neurological sections according to a template specification
+GM, WM, and CSF done with SPM's Segmentation
+Segmenting into specific functional regions and their subregions done with FreeSurfer's recon-all
+Can aid normalization, use specific segmentation as a mask, use segmentation as definition of ROI
+Model Specification and Estimation
+To test a hypothesis, we need to specify a model that incorporates the hypothesis and accounts for the expected function of the BOLD signal, the movement during measurement, experiment specify parameters and other regressors and co-variants. This is usually represented by a Generalized Linear Model (GLM).
+
+Making a GLM
+Describes a response $y$ (ex: the BOLD response in a voxel), at the time points with data in terms of all of its contributing factors ($X\beta$) and error ($\epsilon$).
+
+$$ y = X\beta + \epsilon $$
+$y$ (dependent variable)
+$X$ (independent variable; predictor; experimental conditions, stimulus information, expected shape of BOLD response) These are stored in a design matrix
+$\beta$ (parameters; regression coefficient/beta weights; quantifies how much each predictor independently influences the dependent variable)
+$\epsilon$ (error; assumed to be normally distributed)
+Caveats for the GLM approach:
+
+We need to take the time delay and the HRF (hemodynamic response function) shape of the BOLD response into account when creating the design matrix
+We need to high pass filter the data and add time regressors of 1st, 2nd, ... order to correct for low-frequency drifts in the measured data (the low-frequency noise are caused by scanner drift and other non-experimental effects)
+The high pass filter is established by setting up discrete cosine functions over the time period of data acquisition.
+Each regressors in the model decreases the degrees of freedom in statistical tests
+Estimating the Model
+Applying the model on the time course of each and every voxel. SPM will create images every time an analysis is performed.
+
+Beta images: images of estimated regression coefficients (parameter estimate). These contain information about the size of the effect of interest. A given voxel in each beta image will have value related to the size of effect for the explanatory variables.
+Error image (ResMS-image): Residual sum of squares/variance image. Measurement of within-subject error at the 1st level or between-subject error at the 2nd level analysis. Used to produce spmT images (see below).
+con images (con-images): Produced during contrast estimation from linearly combining beta images
+T images (spmT-images): Produced during contrast estimation from combining the beta values of the con-images with error values of the ResMS-image to calculate the t-value at each voxel.
+Statistical inferences
+1st level analysis (within-subject analysis): The data does not need to be normalized. The design matrix for this level controls for movement, respiration, heart beat, etc.
+
+2nd level analysis (between-subject analysis): Requires normalization and transformation onto reference-space of subject specific data. Requires the contrasts of the 1st level analysis. The design matrix controls for age, gender, socio-economic parameters. Here we specify the group assignment of each subject.
+
+Contrast Estimation (for both 1st and 2nd level analysis)
+Specify how to weight the different regressors of your design matrix and combine them into one image. Essentially, how can you numerically weight what you are interested in such that it's on the same scale.
+
+Examples:
+faces (+1) vs resting (-1)
+session 1 (+1) vs session 2 (-1))
+
+Thresholding
+Specify the level of significance you test your data on. Correct for multiple comparison and specify the parameters of the result you are looking for.
+
+Examples:
+
+FWE-correction: the family-wise error correction can correct for multiple comparisons
+p-value
+voxel extend: specify the minimum size of a significant cluster with the lowest number of voxels it needs to contain (ex 100)
