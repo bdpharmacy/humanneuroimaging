@@ -1,0 +1,28 @@
+Brain screening protocol (MRI)
+Simple non-contrast MRI protocol - mainly for use in pain, not studies.
+
+T1 weighted
+
+plane: saggital (or volumetric 3D)
+sequence: fast-spin echo (T1 FSE) or gradient (T1 MPRAGE)
+purpose: anatomical overview
+T2 weighted
+
+plane: axial
+sequence: T2 FSE
+purpose: evaluations of basal cisterns, ventricular system and subdural spaces, and good visualization of flow voids in vessels
+FLAIR
+
+plane: axial
+sequence: FLAIR
+purpose: assessment of white matter disorders
+Diffusion weighted imaging (DWI)
+
+plane: axial
+sequence: DWI B=0, B=1000 and ADC
+purpose: multiple (identification of stroke to demyelination)
+Susceptibility weighted imaging (SWI)
+
+plane: axial
+sequence: susceptibility weighted imaging (ideal) or T2*
+purpose: identify blood products or calcification
