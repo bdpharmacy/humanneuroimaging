@@ -1,0 +1,52 @@
+The quality of the MRI depends on:
+The resolution
+The repetition time (TR): time required to scan one volume
+The acquisition time (TA): time required to scan one slice $TA = TR - (TR/n_{slices})$
+The field of view (FOV): the extent of the slice (ex. 256mm x 256mm)The raw data format output by MRI scanners varies with the type of scanner, and is often saved in k-space format. Common formats are DICOM and PAR/REC. I think DICOM and PAR/REC are scanner-specific formats encoded in k-space format, but I'm not sure.
+
+I think that the k-space formatted files are converted into NIfTI or Analyze formats. These contain an image and header. For NIfTI files (extension .nii-file) the image and header are in the same file. Analyze, which is older, produces 2 files (.img for the image and .hdr-file for the header)
+
+The image is the data in a 3D matrix that contains a value for each voxel.
+The header contains metadata
+Voxel dimension
+Voxel extend in each dimension
+The number of measured time points
+A transformation matrix that places the 3D matrix in the image in a 3D coordinate system
+etc
+
+sMRI data
+High-resolution images used as reference images for
+corregistration
+normalization
+segmentation
+surface reconstruction
+Voxel resolution ranges from 0.2-1.5mm depending on the magnetic field of the scanner (1.5T, 3T, or 7T)
+Grey matter structures are dark
+White matter structures are light
+
+fMRI data
+Neural activity results in a characterized curve of blood oxygen level. First an initial dip in oxygen; then an increase in oxygen (peak reached after 4-6 seconds); an undershoot in oxygen levels (after 10s in figure); then eventual stabilization.
+
+The signal is the Blood Oxygen Level Dependent (BOLD) response
+Voxel resolution is 2-4mm depending on the magnetic field of the scanner
+Grey matter structures are light
+White matter structures are dark
+Types of experimental designs:
+
+event-related design: Stimuli are administered for a short period. BOLD responses will be short and will manifest as peaks
+block design: Multiple stimuli of similar nature are shone in a "block" or "phase" of 10-30s. The peaks will be elevated for a longer time, creating a plateau; thus the underlying activation increase should be easier to detect.
+resting-state design: Absence of stimulation. Sometimes done to analyze functional connectivity of the brain.
+dMRI data
+Done to obtain information about white matter connections. Measures the diffusion of water via mean diffusivity (MD), fractional anisotropy (FA), and Tractography.
+
+Includes
+
+diffusion tensor imaging (DTI)
+diffusion spectrum imaging (DSI)
+diffusion weighted imaging (DWI)
+diffusion functional MRI (dfMRI)
+It is a new field in MRI and has problems with its sensitivity to correctly detect fiber tracts and their underlying orientation. Standard DTI has almost no chance of reliably detecting kissing (touching) or crossing fiber tracts.
+
+High-angular-resolution diffusion imaging (HARDI) and Q-ball vector analyses were developed to account for this disadvantage.
+
+
