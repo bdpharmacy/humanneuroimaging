@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Path to your FreeSurfer subjects directory
+SUBJECTS_DIR=/path/to/recon-all-subject-directory
+
+# File containing the list of subjects' image filenames
+SUBJECTS_LIST=/path/to/recon-all-subject-directory/subj.txt
+
+# Number of threads to use
+THREADS=24
+
+# Loop through each subject in the subjects list
+while IFS= read -r SUBJECT_IMAGE; do
+  echo "Processing subject image: $SUBJECT_IMAGE"
+  
+  # Run hippocampal-amygdala subfield segmentation using segment_subregions
+  segment_subregions hippo-amygdala --cross $SUBJECT_IMAGE --threads $THREADS
+  # Run thalamic subfield segmentation using segment_subregions
+  segment_subregions thalamus --cross $SUBJECT_IMAGE --threads $THREADS
+  # Run brainstem subfield segmentation using segment_subregions
+  segment_subregions brainstem --cross $SUBJECT_IMAGE --threads $THREADS
+
+done < "$SUBJECTS_LIST"
+
+echo "Subfield segmentation completed for all subjects."
