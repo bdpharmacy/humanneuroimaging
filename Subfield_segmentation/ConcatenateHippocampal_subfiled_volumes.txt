@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Define the parent directory containing individual folders
+PARENT_DIR="/Volumes/OPEN_MRI/00_LIFESPAN/ds003592_aging/Aging_Recon"
+
+# Define output files for intermediate and final results
+RH_OUTPUT="merged_rh_hippoSfVolumes.txt"
+LH_OUTPUT="merged_lh_hippoSfVolumes.txt"
+FINAL_OUTPUT="HippocampalSubfieldVolumes.txt"
+
+# Temporary file for storing subfield names
+TMP_HEADER_FILE="header.tmp"
+
+# Function to merge hemisphere data
+merge_hemisphere_data() {
+  local HEMI=$1
+  local OUTPUT_FILE=$2
+  local FILE_PATTERN="${HEMI}.hippoSfVolumes.txt"
+
+  # Remove previous output and temporary files if they exist
+  if [ -f "$OUTPUT_FILE" ]; then
+    rm "$OUTPUT_FILE"
+  fi
+
+  if [ -f "$TMP_HEADER_FILE" ]; then
+    rm "$TMP_HEADER_FILE"
+  fi
+
+  # Step 1: Collect all unique subfields
+  for FILE in $(find "$PARENT_DIR" -type f -name "$FILE_PATTERN"); do
+    awk '{print $1}' "$FILE" >> "$TMP_HEADER_FILE"
+  done
+
+  # Sort and remove duplicates to create the header
+  echo -e "Subject\t$(sort "$TMP_HEADER_FILE" | uniq | tr '\n' '\t')" > "$OUTPUT_FILE"
+
+  # Step 2: Populate rows for each subject
+  for FILE in $(find "$PARENT_DIR" -type f -name "$FILE_PATTERN"); do
+    # Extract the subject ID
+    SUBJECT_ID=$(basename "$(dirname "$(dirname "$FILE")")")
+    
+    # Initialize an associative array for storing subfield values
+    declare -A DATA
+    while read -r SUBFIELD VALUE; do
+      DATA["$SUBFIELD"]=$VALUE
+    done < "$FILE"
+
+    # Build the row with all subfields, filling missing values with "NA"
+    ROW="$SUBJECT_ID"
+    for SUBFIELD in $(sort "$TMP_HEADER_FILE" | uniq); do
+      ROW+="\t${DATA[$SUBFIELD]:-NA}"
+    done
+
+    # Append the row to the output file
+    echo -e "$ROW" >> "$OUTPUT_FILE"
+
+    # Clear the associative array
+    unset DATA
+  done
+
+  # Clean up temporary file
+  rm "$TMP_HEADER_FILE"
+}
+
+# Merge data for right hemisphere
+echo "Processing right hemisphere..."
+merge_hemisphere_data "rh" "$RH_OUTPUT"
+
+# Merge data for left hemisphere
+echo "Processing left hemisphere..."
+merge_hemisphere_data "lh" "$LH_OUTPUT"
+
+# Step 3: Merge RH and LH results into the final output
+echo "Merging left and right hemisphere data into $FINAL_OUTPUT..."
+if [ -f "$FINAL_OUTPUT" ]; then
+  rm "$FINAL_OUTPUT"
+fi
+
+# Combine headers for both hemispheres
+HEADER_RH=$(head -n 1 "$RH_OUTPUT" | cut -f2-)
+HEADER_LH=$(head -n 1 "$LH_OUTPUT" | cut -f2-)
+echo -e "Subject\t${HEADER_RH}\t${HEADER_LH}" > "$FINAL_OUTPUT"
+
+# Combine data rows
+join -t$'\t' -j 1 <(tail -n +2 "$RH_OUTPUT" | sort) <(tail -n +2 "$LH_OUTPUT" | sort) >> "$FINAL_OUTPUT"
+
+echo "Data collection and merging complete. Final output saved to $FINAL_OUTPUT."
