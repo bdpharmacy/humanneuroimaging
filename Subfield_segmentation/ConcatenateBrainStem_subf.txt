@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Define the parent directory containing individual folders
+PARENT_DIR="/Volumes/OPEN_MRI/00_LIFESPAN/ds003592_aging/Aging_Recon"
+
+# Temporary file for storing subfield names
+TMP_HEADER_FILE="header.tmp"
+FINAL_OUTPUT="brainstemSsLabelsVolumes.txt"
+
+# Remove previous output and temporary files if they exist
+if [ -f "$FINAL_OUTPUT" ]; then
+  rm "$FINAL_OUTPUT"
+fi
+
+if [ -f "$TMP_HEADER_FILE" ]; then
+  rm "$TMP_HEADER_FILE"
+fi
+
+# Step 1: Collect all unique brainstem labels
+for FILE in $(find "$PARENT_DIR" -type f -name "brainstemSsLabels.volumes.txt"); do
+  # Collect the labels (ignore numeric values)
+  awk '{print $1}' "$FILE" >> "$TMP_HEADER_FILE"
+done
+
+# Sort and remove duplicates to create the header
+echo -e "Subject\t$(sort "$TMP_HEADER_FILE" | uniq | tr '\n' '\t')" > "$FINAL_OUTPUT"
+
+# Step 2: Populate rows for each subject
+for FILE in $(find "$PARENT_DIR" -type f -name "brainstemSsLabels.volumes.txt"); do
+  # Extract the subject ID
+  SUBJECT_ID=$(basename "$(dirname "$(dirname "$FILE")")")
+  
+  # Initialize an associative array for storing label values
+  declare -A DATA
+  while read -r LABEL VALUE; do
+    DATA["$LABEL"]=$VALUE
+  done < "$FILE"
+
+  # Build the row with all labels, filling missing values with "NA"
+  ROW="$SUBJECT_ID"
+  for LABEL in $(sort "$TMP_HEADER_FILE" | uniq); do
+    ROW+="\t${DATA[$LABEL]:-NA}"
+  done
+
+  # Append the row to the output file
+  echo -e "$ROW" >> "$FINAL_OUTPUT"
+
+  # Clear the associative array
+  unset DATA
+done
+
+# Clean up temporary file
+rm "$TMP_HEADER_FILE"
+
+echo "Final output saved to $FINAL_OUTPUT"
