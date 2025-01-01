@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Define the parent directory containing individual folders
+PARENT_DIR="/Volumes/OPEN_MRI/00_LIFESPAN/ds003592_aging/Aging_Recon"
+
+# Temporary file for storing subfield names
+TMP_HEADER_FILE="header.tmp"
+FINAL_OUTPUT="ThalamicNucleiVolumes.txt"
+
+# Remove previous output and temporary files if they exist
+if [ -f "$FINAL_OUTPUT" ]; then
+  rm "$FINAL_OUTPUT"
+fi
+
+if [ -f "$TMP_HEADER_FILE" ]; then
+  rm "$TMP_HEADER_FILE"
+fi
+
+# Step 1: Collect all unique nuclei names (both left and right hemispheres)
+for FILE in $(find "$PARENT_DIR" -type f -name "ThalamicNuclei.volumes.txt"); do
+  grep "Left" "$FILE" | awk '{print $1}' >> "$TMP_HEADER_FILE"
+  grep "Right" "$FILE" | awk '{print $1}' >> "$TMP_HEADER_FILE"
+done
+
+# Sort and remove duplicates to create the header
+echo -e "Subject\t$(sort "$TMP_HEADER_FILE" | uniq | tr '\n' '\t')" > "$FINAL_OUTPUT"
+
+# Step 2: Populate rows for each subject
+for FILE in $(find "$PARENT_DIR" -type f -name "ThalamicNuclei.volumes.txt"); do
+  # Extract the subject ID
+  SUBJECT_ID=$(basename "$(dirname "$(dirname "$FILE")")")
+  
+  # Initialize an associative array for storing nuclei values
+  declare -A DATA
+  while read -r NUCLEUS VALUE; do
+    # Only store data for the relevant hemisphere (Left/Right)
+    if [[ "$NUCLEUS" == *"Left"* || "$NUCLEUS" == *"Right"* ]]; then
+      DATA["$NUCLEUS"]=$VALUE
+    fi
+  done < "$FILE"
+
+  # Build the row with all nuclei, filling missing values with "NA"
+  ROW="$SUBJECT_ID"
+  for NUCLEUS in $(sort "$TMP_HEADER_FILE" | uniq); do
+    ROW+="\t${DATA[$NUCLEUS]:-NA}"
+  done
+
+  # Append the row to the output file
+  echo -e "$ROW" >> "$FINAL_OUTPUT"
+
+  # Clear the associative array
+  unset DATA
+done
+
+# Clean up temporary file
+rm "$TMP_HEADER_FILE"
+
+echo "Final output saved to $FINAL_OUTPUT"
